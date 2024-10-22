@@ -38,6 +38,9 @@ body{
     border: 1px solid red;
     border-radius: 5px;
 }
+.error{
+    color: red;
+}
 .message{
     display: flex;
     flex-direction: column;

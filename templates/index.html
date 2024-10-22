@@ -21,6 +21,7 @@
         </div>
         <button id="startTimer" type="submit">Start Timer</button>
         <button id="stopTimer" type="submit">Stop Timer</button>
+        <p class="error"></p>
     </form>
 
     <div class="message">
@@ -34,6 +35,7 @@
         const message = document.querySelector('.message')
         let statusElement = document.querySelector('#timer-status');
         let pResponse = document.querySelector('#response-message')
+        let pError = document.querySelector('.error')
         let interval
         btnStop.style.display = "none"
         message.style.display = "none"
@@ -49,90 +51,96 @@
                 alert("Vul zowel minuten als seconden in.");
                 return;
             }
-    
-            // Stuur de timerdata naar de server via een POST-aanvraag
-            fetch('/start_timer', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ minutes: parseInt(minutes), seconds: parseInt(seconds) }),
-            })
-            .then(response => {
-                // Controleer of het antwoord van de server succesvol is
-                if (!response.ok) {
-                    throw new Error('Netwerkantwoord was niet OK.');
-                }
-                return response.json();
-            })
-            .then(data => {
-                // Toon feedback aan de gebruiker
-                pResponse.innerText = `Timer gestart: ${data.minutes} minuten en ${data.seconds} seconden.`;
-    
-                startPolling()
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                alert('Er is een fout opgetreden bij het starten van de timer.');
-            });
 
-            function startPolling() {
+            pError.innerHTML = ''
 
-              // Poll elke seconde om de status van de timer op te halen
-              const interval = setInterval(() => {
-                fetch('/check_timer')
-                .then(response => response.json())
+            if (minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+                pError.innerHTML = "het aantal minuten en seconden mag niet lager zijn dan 0 en hoger zijn dan 59"
+            } else {
+                // Stuur de timerdata naar de server via een POST-aanvraag
+                fetch('/start_timer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ minutes: parseInt(minutes), seconds: parseInt(seconds) }),
+                })
+                .then(response => {
+                    // Controleer of het antwoord van de server succesvol is
+                    if (!response.ok) {
+                        throw new Error('Netwerkantwoord was niet OK.');
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                        if (data.status === 'done') {
-                            clearInterval(interval);  // Stop met polling als de timer klaar is
-                            statusElement.innerHTML = `De timer is afgelopen`;
-                            btnStart.style.display = "block"
-                            btnStop.style.display = "none"
-                        } else if(data.status === 'stopped'){
-                            clearInterval(interval);  // Stop met polling als de timer klaar is
-                            statusElement.innerHTML = `De timer is gestopt`;
-                        } else {
-                            statusElement.innerHTML = `De timer loopt nog`;
-                        }
-                    });
-                }, 1000); 
-            }
+                    // Toon feedback aan de gebruiker
+                    pResponse.innerText = `Timer gestart: ${data.minutes} minuten en ${data.seconds} seconden.`;
+        
+                    startPolling()
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    alert('Er is een fout opgetreden bij het starten van de timer.');
+                });
 
-            let fields = document.querySelectorAll('input[type=number]')
-            fields.forEach(function(field){
-               field.value = ''
-            })
+                function startPolling() {
 
-            btnStart.style.display = "none"
-            btnStop.style.display = "block"
-            message.style.display = "flex"
-        })
-
-        btnStop.addEventListener('click', function(e) {
-            e.preventDefault();
-
-            // Stuur een GET-aanvraag om de timer te stoppen
-            fetch('/stop_timer', {
-                method: 'GET',
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Netwerkantwoord was niet OK.');
+                // Poll elke seconde om de status van de timer op te halen
+                const interval = setInterval(() => {
+                    fetch('/check_timer')
+                    .then(response => response.json())
+                    .then(data => {
+                            if (data.status === 'done') {
+                                clearInterval(interval);  // Stop met polling als de timer klaar is
+                                statusElement.innerHTML = `De timer is afgelopen`;
+                                btnStart.style.display = "block"
+                                btnStop.style.display = "none"
+                            } else if(data.status === 'stopped'){
+                                clearInterval(interval);  // Stop met polling als de timer klaar is
+                                statusElement.innerHTML = `De timer is gestopt`;
+                            } else {
+                                statusElement.innerHTML = `De timer loopt nog`;
+                            }
+                        });
+                    }, 1000); 
                 }
-                return response.json();
-            })
-            .then(data => {
-                clearInterval(interval);  // Stop het interval voor status polling
-                pResponse.innerHTML = `bericht`
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                alert('Er is een fout opgetreden bij het stoppen van de timer.');
-            });
 
-            btnStop.style.display = "none"
-            btnStart.style.display = "block"
-        });
+                let fields = document.querySelectorAll('input[type=number]')
+                fields.forEach(function(field){
+                    field.value = ''
+                })
+
+                btnStart.style.display = "none"
+                btnStop.style.display = "block"
+                message.style.display = "flex"
+
+                btnStop.addEventListener('click', function(e) {
+                    e.preventDefault();
+
+                    // Stuur een GET-aanvraag om de timer te stoppen
+                    fetch('/stop_timer', {
+                        method: 'GET',
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Netwerkantwoord was niet OK.');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        clearInterval(interval);  // Stop het interval voor status polling
+                        pResponse.innerHTML = `bericht`
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                        alert('Er is een fout opgetreden bij het stoppen van de timer.');
+                    });
+
+                    btnStop.style.display = "none"
+                    btnStart.style.display = "block"
+                });
+            }
+        })
     </script>    
 </body>
 </html>
