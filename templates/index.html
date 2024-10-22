@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Web App</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Start Timer</h1>
+
+    <!-- Formulier om de timer in te stellen -->
+    <form id="timer-form">
+        <div class="form-control">
+            <label for="minutes">Minuten:</label>
+            <input type="number" id="minutes" name="minutes" min="0" max="59" required>
+        </div>
+        <div class="form-control">
+            <label for="seconds">Seconden:</label>
+            <input type="number" id="seconds" name="seconds" min="0" max="59" required>
+        </div>
+        <button id="startTimer" type="submit">Start Timer</button>
+    </form>
+
+    <p id="response-message"></p>
+    <p id="timer-status"></p>
+
+    <script>
+        document.getElementById('timer-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+    
+            // Verkrijg de ingevoerde waarden
+            const minutes = document.getElementById('minutes').value;
+            const seconds = document.getElementById('seconds').value;
+    
+            // Controleer of de waarden correct zijn
+            if (minutes === "" || seconds === "") {
+                alert("Vul zowel minuten als seconden in.");
+                return;
+            }
+    
+            // Stuur de timerdata naar de server via een POST-aanvraag
+            fetch('/start_timer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ minutes: parseInt(minutes), seconds: parseInt(seconds) }),
+            })
+            .then(response => {
+                // Controleer of het antwoord van de server succesvol is
+                if (!response.ok) {
+                    throw new Error('Netwerkantwoord was niet OK.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Toon feedback aan de gebruiker
+                document.getElementById('response-message').innerText = `Timer gestart: ${data.minutes} minuten en ${data.seconds} seconden.`;
+    
+                startPolling()
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Er is een fout opgetreden bij het starten van de timer.');
+            });
+
+            function startPolling() {
+              const statusElement = document.getElementById('timer-status');
+
+              // Poll elke seconde om de status van de timer op te halen
+              const interval = setInterval(() => {
+                fetch('/check_timer')
+                .then(response => response.json())
+                .then(data => {
+                        if (data.status === 'done') {
+                            clearInterval(interval);  // Stop met polling als de timer klaar is
+                            statusElement.innerText = `De timer is afgelopen`;
+                        } else {
+                            statusElement.innerText = `De timer loopt nog`;
+                        }
+                    });
+                }, 1000); 
+            }
+        });
+    </script>    
+</body>
+</html>
