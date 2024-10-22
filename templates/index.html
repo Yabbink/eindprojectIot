@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <h1>Start Timer</h1>
+    <h1>Timer</h1>
 
     <!-- Formulier om de timer in te stellen -->
     <form id="timer-form">
@@ -20,18 +20,29 @@
             <input type="number" id="seconds" name="seconds" min="0" max="59" required>
         </div>
         <button id="startTimer" type="submit">Start Timer</button>
+        <button id="stopTimer" type="submit">Stop Timer</button>
     </form>
 
-    <p id="response-message"></p>
-    <p id="timer-status"></p>
+    <div class="message">
+        <p id="response-message"></p>
+        <p id="timer-status"></p>
+    </div>
 
     <script>
-        document.getElementById('timer-form').addEventListener('submit', function(e) {
+        const btnStart = document.querySelector('#startTimer')
+        const btnStop = document.querySelector('#stopTimer')
+        const message = document.querySelector('.message')
+        let statusElement = document.querySelector('#timer-status');
+        let pResponse = document.querySelector('#response-message')
+        let interval
+        btnStop.style.display = "none"
+        message.style.display = "none"
+        btnStart.addEventListener('click', function(e){
             e.preventDefault();
     
             // Verkrijg de ingevoerde waarden
-            const minutes = document.getElementById('minutes').value;
-            const seconds = document.getElementById('seconds').value;
+            let minutes = document.querySelector('#minutes').value;
+            let seconds = document.querySelector('#seconds').value;
     
             // Controleer of de waarden correct zijn
             if (minutes === "" || seconds === "") {
@@ -56,7 +67,7 @@
             })
             .then(data => {
                 // Toon feedback aan de gebruiker
-                document.getElementById('response-message').innerText = `Timer gestart: ${data.minutes} minuten en ${data.seconds} seconden.`;
+                pResponse.innerText = `Timer gestart: ${data.minutes} minuten en ${data.seconds} seconden.`;
     
                 startPolling()
             })
@@ -66,7 +77,6 @@
             });
 
             function startPolling() {
-              const statusElement = document.getElementById('timer-status');
 
               // Poll elke seconde om de status van de timer op te halen
               const interval = setInterval(() => {
@@ -75,13 +85,53 @@
                 .then(data => {
                         if (data.status === 'done') {
                             clearInterval(interval);  // Stop met polling als de timer klaar is
-                            statusElement.innerText = `De timer is afgelopen`;
+                            statusElement.innerHTML = `De timer is afgelopen`;
+                            btnStart.style.display = "block"
+                            btnStop.style.display = "none"
+                        } else if(data.status === 'stopped'){
+                            clearInterval(interval);  // Stop met polling als de timer klaar is
+                            statusElement.innerHTML = `De timer is gestopt`;
                         } else {
-                            statusElement.innerText = `De timer loopt nog`;
+                            statusElement.innerHTML = `De timer loopt nog`;
                         }
                     });
                 }, 1000); 
             }
+
+            let fields = document.querySelectorAll('input[type=number]')
+            fields.forEach(function(field){
+               field.value = ''
+            })
+
+            btnStart.style.display = "none"
+            btnStop.style.display = "block"
+            message.style.display = "flex"
+        })
+
+        btnStop.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            // Stuur een GET-aanvraag om de timer te stoppen
+            fetch('/stop_timer', {
+                method: 'GET',
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Netwerkantwoord was niet OK.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                clearInterval(interval);  // Stop het interval voor status polling
+                pResponse.innerHTML = `bericht`
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Er is een fout opgetreden bij het stoppen van de timer.');
+            });
+
+            btnStop.style.display = "none"
+            btnStart.style.display = "block"
         });
     </script>    
 </body>

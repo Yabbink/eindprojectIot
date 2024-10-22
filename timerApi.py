@@ -13,8 +13,10 @@ display = tm1637.TM1637(13, 19, brightness=7)
 display.Clear()
 display.SetBrightness(1)
 
-# Timerstatus bijhouden (Global variable)
+# Timerstatus bijhouden (Global variables)
 finished = False
+timer_stopped = False
+stopped_by_user = False  # Variabele om bij te houden of de gebruiker de timer gestopt heeft
 
 # Functie om minuten en seconden op het display te tonen
 def display_time(minutes, seconds):
@@ -24,11 +26,21 @@ def display_time(minutes, seconds):
 
 # Functie om de timer af te laten tellen
 def countdown(minutes, seconds):
-    global finished
+    global finished, timer_stopped, stopped_by_user
     finished = False  # Reset de status van de timer
+    timer_stopped = False  # Reset de stopflag
+    stopped_by_user = False  # Reset de 'stopped by user'-flag
 
     while minutes >= 0:
+        if timer_stopped:  # Check of er een stopverzoek is
+            display.Clear()
+            stopped_by_user = True  # Markeer dat de timer handmatig is gestopt
+            return  # Stop de timer en verlaat de functie
         while seconds >= 0:
+            if timer_stopped:  # Check binnen de seconden-lus
+                display.Clear()
+                stopped_by_user = True  # Markeer dat de timer handmatig is gestopt
+                return  # Stop de timer en verlaat de functie
             display_time(minutes, seconds)
             time.sleep(1)  # Wacht 1 seconde
             seconds -= 1   # Verminder seconden met 1
@@ -46,6 +58,13 @@ def index():
 # API route om de timer te starten
 @app.route('/start_timer', methods=['POST'])
 def start_timer():
+    global finished, timer_stopped, stopped_by_user
+    
+    # Reset alle relevante variabelen
+    finished = False
+    timer_stopped = False
+    stopped_by_user = False
+    
     data = request.json
     minutes = data.get('minutes', 0)
     seconds = data.get('seconds', 0)
@@ -56,11 +75,24 @@ def start_timer():
     
     return jsonify({'status': 'Timer gestart', 'minutes': minutes, 'seconds': seconds})
 
+# API route om de timer te stoppen
+@app.route('/stop_timer', methods=['GET'])
+def stop_timer():
+    global timer_stopped
+    timer_stopped = True  # Zet de vlag om de timer te stoppen
+    return jsonify({'status': 'Timer gestopt'})
+
+# API om de timerstatus te controleren
 @app.route('/check_timer', methods=['GET'])
 def check_timer():
-    global finished
+    global finished, stopped_by_user
 
-    return jsonify({'status': 'done' if finished else 'running'})
+    if stopped_by_user:
+        return jsonify({'status': 'stopped'})
+    elif finished:
+        return jsonify({'status': 'done'})
+    else:
+        return jsonify({'status': 'running'})
 
 # Start de Flask server
 if __name__ == '__main__':
