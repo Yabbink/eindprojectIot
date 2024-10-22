@@ -12,6 +12,10 @@
     <!-- Formulier om de timer in te stellen -->
     <form id="timer-form">
         <div class="form-control">
+            <label for="hours">Uren:</label>
+            <input type="number" id="hours" name="hours" min="0" max="23" required>
+        </div>
+        <div class="form-control">
             <label for="minutes">Minuten:</label>
             <input type="number" id="minutes" name="minutes" min="0" max="59" required>
         </div>
@@ -23,101 +27,110 @@
         <button id="stopTimer" type="submit">Stop Timer</button>
         <p class="error"></p>
     </form>
-
+    
     <div class="message">
         <p id="response-message"></p>
         <p id="timer-status"></p>
     </div>
-
-    <script>
-        const btnStart = document.querySelector('#startTimer')
-        const btnStop = document.querySelector('#stopTimer')
-        const message = document.querySelector('.message')
-        let statusElement = document.querySelector('#timer-status');
-        let pResponse = document.querySelector('#response-message')
-        let pError = document.querySelector('.error')
-        let interval
-        btnStop.style.display = "none"
-        message.style.display = "none"
-        btnStart.addEventListener('click', function(e){
-            e.preventDefault();
     
-            // Verkrijg de ingevoerde waarden
+    <script>
+        // Selecteer de start- en stopknoppen en andere elementen uit de DOM
+        const btnStart = document.querySelector('#startTimer');
+        const btnStop = document.querySelector('#stopTimer');
+        const message = document.querySelector('.message');
+        let statusElement = document.querySelector('#timer-status');
+        let pResponse = document.querySelector('#response-message');
+        let pError = document.querySelector('.error');
+        // Variabele voor het interval om de tijd bij te houden
+        let interval; 
+
+        // Verberg de stopknop en het bericht bij het laden van de pagina
+        btnStop.style.display = "none";
+        message.style.display = "none";
+
+        // Voeg een eventlistener toe voor de startknop
+        btnStart.addEventListener('click', function(e) {
+            e.preventDefault(); // Voorkom standaardformulieractie
+
+            // Verkrijg de ingevoerde waarden voor uren, minuten en seconden
+            let hours = document.querySelector('#hours').value;
             let minutes = document.querySelector('#minutes').value;
             let seconds = document.querySelector('#seconds').value;
-    
-            // Controleer of de waarden correct zijn
-            if (minutes === "" || seconds === "") {
-                alert("Vul zowel minuten als seconden in.");
-                return;
+
+            // Controleer of alle velden zijn ingevuld
+            if (hours === "" || minutes === "" || seconds === "") {
+                alert("Vul uren, minuten en seconden in.");
+                return; // stop als velden leeg zijn
             }
 
-            pError.innerHTML = ''
+            pError.innerHTML = ''; // Wis eventuele vorige foutmeldingen
 
-            if (minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
-                pError.innerHTML = "het aantal minuten en seconden mag niet lager zijn dan 0 en hoger zijn dan 59"
+            // Controleer of de waarden binnen de toegestane intervallen vallen
+            if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59 || seconds < 0 || seconds > 59) {
+                pError.innerHTML = "Het aantal uren moet tussen 0 en 23 liggen, minuten tussen 0 en 59, en seconden tussen 0 en 59.";
             } else {
-                // Stuur de timerdata naar de server via een POST-aanvraag
+                // Stuur een POST-aanvraag naar de server om de timer te starten
                 fetch('/start_timer', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ minutes: parseInt(minutes), seconds: parseInt(seconds) }),
+                    body: JSON.stringify({ hours: parseInt(hours), minutes: parseInt(minutes), seconds: parseInt(seconds) }),
                 })
                 .then(response => {
-                    // Controleer of het antwoord van de server succesvol is
                     if (!response.ok) {
                         throw new Error('Netwerkantwoord was niet OK.');
                     }
-                    return response.json();
+                    return response.json(); // Verwerk het JSON-antwoord
                 })
                 .then(data => {
-                    // Toon feedback aan de gebruiker
-                    pResponse.innerText = `Timer gestart: ${data.minutes} minuten en ${data.seconds} seconden.`;
-        
-                    startPolling()
+                    // Toon een bericht met de startwaarden van de timer
+                    pResponse.innerText = `Timer gestart: ${data.hours} uren, ${data.minutes} minuten en ${data.seconds} seconden.`;
+                    startPolling(); // Start de polling om de timerstatus op te halen
                 })
                 .catch((error) => {
                     console.error('Error:', error);
                     alert('Er is een fout opgetreden bij het starten van de timer.');
                 });
 
+                // Functie voor het bijhouden van de timerstatus
                 function startPolling() {
-
-                // Poll elke seconde om de status van de timer op te halen
-                const interval = setInterval(() => {
-                    fetch('/check_timer')
-                    .then(response => response.json())
-                    .then(data => {
+                    // Stel een interval in dat elke seconde de status van de timer ophaalt
+                    interval = setInterval(() => {
+                        fetch('/check_timer')
+                        .then(response => response.json())
+                        .then(data => {
                             if (data.status === 'done') {
-                                clearInterval(interval);  // Stop met polling als de timer klaar is
-                                statusElement.innerHTML = `De timer is afgelopen`;
-                                btnStart.style.display = "block"
-                                btnStop.style.display = "none"
-                            } else if(data.status === 'stopped'){
-                                clearInterval(interval);  // Stop met polling als de timer klaar is
-                                statusElement.innerHTML = `De timer is gestopt`;
+                                clearInterval(interval); // Stop de polling als de timer is afgelopen
+                                statusElement.innerHTML = `De timer is afgelopen.`;
+                                btnStart.style.display = "block"; // Toon de startknop opnieuw
+                                btnStop.style.display = "none"; // Verberg de stopknop
+                            } else if (data.status === 'stopped') {
+                                clearInterval(interval); // Stop de polling als de timer is gestopt
+                                statusElement.innerHTML = `De timer is gestopt.`;
                             } else {
-                                statusElement.innerHTML = `De timer loopt nog`;
+                                statusElement.innerHTML = `De timer loopt nog.`; // Update de status als de timer nog loopt
                             }
                         });
-                    }, 1000); 
+                    }, 1000); // Poll elke seconde
                 }
 
-                let fields = document.querySelectorAll('input[type=number]')
-                fields.forEach(function(field){
-                    field.value = ''
-                })
+                // Wis de waarden van de invoervelden na het starten van de timer
+                let fields = document.querySelectorAll('input[type=number]');
+                fields.forEach(function(field) {
+                    field.value = ''; // Stel de waarde van elk veld in op leeg
+                });
 
-                btnStart.style.display = "none"
-                btnStop.style.display = "block"
-                message.style.display = "flex"
+                // Verberg de startknop en toon de stopknop na het starten van de timer
+                btnStart.style.display = "none";
+                btnStop.style.display = "block";
+                message.style.display = "flex"; // Toon een bericht na het starten
 
+                // Voeg een eventlistener toe voor de stopknop
                 btnStop.addEventListener('click', function(e) {
-                    e.preventDefault();
+                    e.preventDefault(); // Voorkom standaardformulieractie
 
-                    // Stuur een GET-aanvraag om de timer te stoppen
+                    // Stuur een GET-aanvraag naar de server om de timer te stoppen
                     fetch('/stop_timer', {
                         method: 'GET',
                     })
@@ -125,22 +138,23 @@
                         if (!response.ok) {
                             throw new Error('Netwerkantwoord was niet OK.');
                         }
-                        return response.json();
+                        return response.json(); // Verwerk het JSON-antwoord
                     })
                     .then(data => {
-                        clearInterval(interval);  // Stop het interval voor status polling
-                        pResponse.innerHTML = `bericht`
+                        clearInterval(interval); // Stop de polling bij het stoppen van de timer
+                        pResponse.innerHTML = `Timer is gestopt.`; // Toon een bericht dat de timer is gestopt
                     })
                     .catch((error) => {
                         console.error('Error:', error);
                         alert('Er is een fout opgetreden bij het stoppen van de timer.');
                     });
 
-                    btnStop.style.display = "none"
-                    btnStart.style.display = "block"
+                    // Verberg de stopknop en toon de startknop opnieuw na het stoppen van de timer
+                    btnStop.style.display = "none";
+                    btnStart.style.display = "block";
                 });
             }
-        })
+        });
     </script>    
 </body>
 </html>
