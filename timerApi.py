@@ -93,7 +93,7 @@ def start_timer():
 @app.route('/stop_timer', methods=['GET'])
 def stop_timer():
     global timer_stopped
-    timer_stopped = True  # Zet de vlag om de timer te stoppen
+    timer_stopped = True  # Zet de status op stopped om de timer te stoppen
     return jsonify({'status': 'Timer gestopt'})
 
 # API om de timerstatus te controleren
