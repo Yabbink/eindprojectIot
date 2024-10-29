@@ -20,6 +20,7 @@ stopped_by_user = False  # Variabele om bij te houden of de gebruiker de timer g
 
 # Functie om uren, minuten en seconden op het display te tonen
 def display_time(hours, minutes, seconds):
+    time_digits = []
     if hours > 0:
         # Als er uren over zijn, toon uren en minuten
         time_digits = [hours // 10, hours % 10, minutes // 10, minutes % 10]
@@ -33,35 +34,34 @@ def display_time(hours, minutes, seconds):
 def countdown(hours, minutes, seconds):
     global finished, timer_stopped, stopped_by_user
     finished = False  # Reset de status van de timer
-    timer_stopped = False  # Reset de stopflag
-    stopped_by_user = False  # Reset de 'stopped by user'-flag
+    timer_stopped = False  # Reset de status van de stopped boolean van de timer
+    stopped_by_user = False  # Reset de status van de stopped by user boolean van de timer
 
-    while hours >= 0:
+    while (hours > 0) or (minutes > 0) or (seconds >= 0):
         if timer_stopped:  # Check of er een stopverzoek is
             display.Clear()
             stopped_by_user = True  # Markeer dat de timer handmatig is gestopt
             return  # Stop de timer en verlaat de functie
-        while minutes >= 0:
-            if timer_stopped:  # Check binnen de minuten-lus
-                display.Clear()
-                stopped_by_user = True  # Markeer dat de timer handmatig is gestopt
-                return  # Stop de timer en verlaat de functie
-            while seconds >= 0:
-                if timer_stopped:  # Check binnen de seconden-lus
-                    display.Clear()
-                    stopped_by_user = True  # Markeer dat de timer handmatig is gestopt
-                    return  # Stop de timer en verlaat de functie
-                display_time(hours, minutes, seconds)  # Toon de juiste tijd
-                time.sleep(1)  # Wacht 1 seconde
-                seconds -= 1   # Verminder seconden met 1
-            minutes -= 1      # Verminder minuten met 1 als seconden 0 bereiken
-            seconds = 59      # Reset seconden naar 59 voor de nieuwe minuut
-        if hours > 0:        # Verminder uren alleen als uren > 0
-            hours -= 1       # Verminder uren met 1 als minuten 0 bereiken
-            minutes = 59     # Reset minuten naar 59 voor het nieuwe uur
-
-    finished = True  # Zet de status op 'klaar'
+        
+        # Controleer of de seconden moeten worden gereset
+        if seconds < 0:
+            if minutes > 0:
+                minutes -= 1      # Verminder minuten met 1 als seconden 0 bereiken
+                seconds = 59      # Reset seconden naar 59 voor de nieuwe minuut
+            elif hours > 0:
+                hours -= 1        # Verminder uren met 1 als minuten op 0 zijn
+                minutes = 59      # Reset minuten naar 59 voor het nieuwe uur
+                seconds = 59      # Reset seconden naar 59 voor de nieuwe minuut
+            else:
+                break  # Stop de loop als de tijd voorbij is
+        
+        display_time(hours, minutes, seconds)
+        time.sleep(1)  # Wacht 1 seconde
+        seconds -= 1   # Verminder seconden met 1
+        print(f"hour: {hours} min: {minutes} sec: {seconds}")
+    
     display.Clear()  # Wis het display als de tijd voorbij is
+    finished = True  # Markeer dat de timer is voltooid
 
 # Webpagina met formulier om de timer in te stellen
 @app.route('/')
@@ -93,8 +93,8 @@ def start_timer():
 @app.route('/stop_timer', methods=['GET'])
 def stop_timer():
     global timer_stopped
-    timer_stopped = True  # Zet de status op stopped om de timer te stoppen
-    return jsonify({'status': 'Timer gestopt'})
+    timer_stopped = True  # Zet de boolean op true om de timer te stoppen
+    return jsonify({'status': 'gestopt'})
 
 # API om de timerstatus te controleren
 @app.route('/check_timer', methods=['GET'])
@@ -111,7 +111,5 @@ def check_timer():
 # Start de Flask server
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
 
 

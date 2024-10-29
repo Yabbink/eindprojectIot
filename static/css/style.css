@@ -38,7 +38,11 @@ body{
     border: 1px solid red;
     border-radius: 5px;
 }
+.error{
+    color: red;
+}
 .message{
+    width: 40%;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -47,4 +51,12 @@ body{
     padding: 20px;
     border: 2px solid black;
     border-radius: 5px;
+}
+@media screen and (max-width:650px) {
+    #timer-form{
+        width: 90%;
+    }
+    .message{
+        width: 90%;
+    }
 }
