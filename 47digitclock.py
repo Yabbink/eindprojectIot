@@ -3,7 +3,6 @@
 
 # https://raspberrytips.nl
 
-import sys
 import time
 import datetime
 import RPi.GPIO as GPIO
