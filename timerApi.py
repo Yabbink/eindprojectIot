@@ -19,14 +19,6 @@ finished = False
 timer_stopped = False
 stopped_by_user = False  # Variabele om bij te houden of de gebruiker de timer gestopt heeft
 
-# Functie om de tijd op dit moment te laten zien
-def show_current_time():
-    now = datetime.datetime.now()
-    hours = now.hour
-    minutes = now.minute
-    # Toon alleen uren en minuten
-    display.Show([hours // 10, hours % 10, minutes // 10, minutes % 10])
-
 # Functie om uren, minuten en seconden op het display te tonen
 def display_time(hours, minutes, seconds):
     time_digits = []
@@ -72,12 +64,10 @@ def countdown(hours, minutes, seconds):
     display.Clear()  # Wis het display als de tijd voorbij is
     time.sleep(1)
     finished = True  # Markeer dat de timer is voltooid
-    show_current_time()  # Toon de huidige tijd als de timer is afgelopen
 
 # Webpagina met formulier om de timer in te stellen
 @app.route('/')
 def index():
-    show_current_time()  # Toon de huidige tijd bij het laden van de pagina
     return render_template('index.html')
 
 # API route om de timer te starten
@@ -122,7 +112,6 @@ def check_timer():
 
 # Start de Flask server
 if __name__ == '__main__':
-    show_current_time()  # Toon de huidige tijd bij het starten van de applicatie
     app.run(host='0.0.0.0', port=5000)
 
 
